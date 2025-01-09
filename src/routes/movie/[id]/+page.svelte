@@ -164,7 +164,7 @@
                     </div>
 
                     <!-- Movie Details -->
-                    <div class="flex-1 {movie.backdropPath ? 'text-white' : 'text-gray-900'}">
+                    <div class="flex-1 {movie.backdropPath ? 'md:text-white' : 'text-gray-900'}">
                         <h1 class="text-4xl font-bold mb-4">{movie.title}</h1>
                         <div class="mb-4 flex items-center gap-4">
                             <span class="inline-flex items-center bg-yellow-400 text-black px-2 py-1 rounded">
@@ -173,7 +173,7 @@
                             <span>{new Date(movie.releaseDate).getFullYear()}</span>
                             <span>{formatRuntime(movie.runtime)}</span>
                         </div>
-                        <p class="text-lg mb-8 {movie.backdropPath ? 'text-gray-200' : 'text-gray-700'}">
+                        <p class="text-lg mb-8 {movie.backdropPath ? 'md:text-gray-200' : 'text-gray-700'}">
                             {movie.overview}
                         </p>
                     </div>
