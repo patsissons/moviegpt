@@ -36,6 +36,7 @@
     let selectedCastIds = new Set<number>();
     let castMovies: CastMovie[] = [];
     let isCastMoviesLoading = false;
+    let hasPerformedSearch = false;
     let castMoviesError: string | null = null;
     let castSearchTimer: NodeJS.Timeout;
 
@@ -49,6 +50,7 @@
             selectedCastIds.clear();
             selectedCastIds = selectedCastIds;
             castMovies = [];
+            hasPerformedSearch = false;
         } catch (e) {
             error = 'Failed to load movie details';
         } finally {
@@ -59,6 +61,7 @@
     async function searchCastMovies() {
         if (selectedCastIds.size === 0) {
             castMovies = [];
+            hasPerformedSearch = false;
             return;
         }
 
@@ -75,12 +78,16 @@
             castMovies = [];
         } finally {
             isCastMoviesLoading = false;
+            hasPerformedSearch = true;
         }
     }
 
     function toggleCastSelection(castId: number) {
         if (selectedCastIds.has(castId)) {
             selectedCastIds.delete(castId);
+            if (selectedCastIds.size === 0) {
+                hasPerformedSearch = false;
+            }
         } else {
             selectedCastIds.add(castId);
         }
@@ -213,7 +220,7 @@
         {#if selectedCastIds.size > 0}
             <div class="container mx-auto px-4 py-8 border-t border-gray-200">
                 <h2 class="text-2xl font-bold mb-4">Movies with Selected Cast</h2>
-                {#if isCastMoviesLoading}
+                {#if isCastMoviesLoading || !hasPerformedSearch}
                     <div class="flex justify-center items-center py-8">
                         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
                     </div>
