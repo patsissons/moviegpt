@@ -24,6 +24,7 @@
     interface CastMovie {
         id: number;
         title: string;
+        overview: string;
         posterPath: string | null;
         releaseDate: string;
         castIds: number[];
@@ -239,7 +240,7 @@
                                             </div>
                                         {/if}
                                     </div>
-                                    <div class="flex-1">
+                                    <div class="flex-1 min-w-0">
                                         <h3 class="text-lg font-medium text-gray-900">
                                             {castMovie.title}
                                             <span class="text-sm text-gray-500 ml-2">
@@ -248,6 +249,9 @@
                                         </h3>
                                         <p class="text-sm text-gray-600 mt-1">
                                             Starring: {getSelectedCastInMovie(castMovie.castIds)}
+                                        </p>
+                                        <p class="text-sm text-gray-700 mt-2 line-clamp-2">
+                                            {castMovie.overview}
                                         </p>
                                     </div>
                                 </a>

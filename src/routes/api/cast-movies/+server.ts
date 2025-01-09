@@ -47,6 +47,7 @@ export const GET: RequestHandler = async ({ url }) => {
             return {
                 id: movie.id,
                 title: movie.title,
+                overview: movie.overview,
                 posterPath: movie.poster_path ? `https://image.tmdb.org/t/p/w200${movie.poster_path}` : null,
                 releaseDate: movie.release_date,
                 castIds: Array.from(movieCastMap.get(movie.id) || [])
