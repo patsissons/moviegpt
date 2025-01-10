@@ -24,10 +24,12 @@
     interface CastMovie {
         id: number;
         title: string;
-        overview: string;
+        overview?: string;
         posterPath: string | null;
         releaseDate: string;
         castIds: number[];
+        isDetailLoaded: boolean;
+        isLoading?: boolean;
     }
 
     let movie: Movie | null = null;
@@ -39,6 +41,7 @@
     let hasPerformedSearch = false;
     let castMoviesError: string | null = null;
     let castSearchTimer: NodeJS.Timeout;
+    let observers = new Map<number, IntersectionObserver>();
 
     async function loadMovieDetails(id: string) {
         try {
@@ -51,11 +54,67 @@
             selectedCastIds = selectedCastIds;
             castMovies = [];
             hasPerformedSearch = false;
+            // Clean up any existing observers
+            observers.forEach(observer => observer.disconnect());
+            observers.clear();
         } catch (e) {
             error = 'Failed to load movie details';
         } finally {
             isLoading = false;
         }
+    }
+
+    async function loadCastMovieDetails(castMovie: CastMovie) {
+        if (castMovie.isDetailLoaded || castMovie.isLoading) return;
+
+        castMovie.isLoading = true;
+        castMovies = castMovies; // Trigger reactivity
+
+        try {
+            const response = await fetch(`/api/cast-movies?movieId=${castMovie.id}`);
+            if (!response.ok) throw new Error('Failed to load movie details');
+            const data = await response.json();
+
+            // Update the movie with full details
+            const index = castMovies.findIndex(m => m.id === castMovie.id);
+            if (index !== -1) {
+                castMovies[index] = {
+                    ...castMovies[index],
+                    ...data.movie,
+                    isDetailLoaded: true,
+                    isLoading: false
+                };
+                castMovies = castMovies; // Trigger reactivity
+            }
+        } catch (e) {
+            console.error(`Failed to load details for movie ${castMovie.id}:`, e);
+            castMovie.isLoading = false;
+            castMovies = castMovies; // Trigger reactivity
+        }
+    }
+
+    function observeMovie(node: HTMLElement, movie: CastMovie) {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        loadCastMovieDetails(movie);
+                        observer.unobserve(node);
+                    }
+                });
+            },
+            { rootMargin: '50px' }
+        );
+
+        observer.observe(node);
+        observers.set(movie.id, observer);
+
+        return {
+            destroy() {
+                observer.disconnect();
+                observers.delete(movie.id);
+            }
+        };
     }
 
     async function searchCastMovies() {
@@ -122,6 +181,9 @@
     onMount(() => {
         return () => {
             clearTimeout(castSearchTimer);
+            // Clean up all observers
+            observers.forEach(observer => observer.disconnect());
+            observers.clear();
         };
     });
 </script>
@@ -229,10 +291,11 @@
                 {:else if castMovies.length > 0}
                     <div class="space-y-4">
                         {#each castMovies as castMovie (castMovie.id)}
-                            {#if castMovie.id !== movie.id}
+                            {#if castMovie.id !== movie?.id}
                                 <a
                                     href="/movie/{castMovie.id}"
                                     class="flex items-start gap-4 p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow"
+                                    use:observeMovie={castMovie}
                                 >
                                     <div class="w-24 h-36 flex-shrink-0">
                                         {#if castMovie.posterPath}
@@ -257,9 +320,16 @@
                                         <p class="text-sm text-gray-600 mt-1">
                                             Starring: {getSelectedCastInMovie(castMovie.castIds)}
                                         </p>
-                                        <p class="text-sm text-gray-700 mt-2 line-clamp-2">
-                                            {castMovie.overview}
-                                        </p>
+                                        {#if castMovie.isLoading}
+                                            <div class="flex items-center gap-2 mt-2">
+                                                <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                                                <span class="text-sm text-gray-500">Loading details...</span>
+                                            </div>
+                                        {:else if castMovie.overview}
+                                            <p class="text-sm text-gray-700 mt-2 line-clamp-2">
+                                                {castMovie.overview}
+                                            </p>
+                                        {/if}
                                     </div>
                                 </a>
                             {/if}

@@ -6,7 +6,32 @@ const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 
 export const GET: RequestHandler = async ({ url }) => {
     const castIds = url.searchParams.get('ids')?.split(',');
+    const movieId = url.searchParams.get('movieId');
 
+    // If movieId is provided, fetch and return detailed movie info
+    if (movieId) {
+        try {
+            const response = await fetch(
+                `${TMDB_BASE_URL}/movie/${movieId}?api_key=${TMDB_API_KEY}&language=en-US`
+            );
+            if (!response.ok) return json({ error: 'Movie not found' }, { status: 404 });
+            const movie = await response.json();
+            return json({
+                movie: {
+                    id: movie.id,
+                    title: movie.title,
+                    overview: movie.overview,
+                    posterPath: movie.poster_path ? `https://image.tmdb.org/t/p/w200${movie.poster_path}` : null,
+                    releaseDate: movie.release_date
+                }
+            });
+        } catch (error) {
+            console.error('Movie details error:', error);
+            return json({ error: 'Failed to fetch movie details' }, { status: 500 });
+        }
+    }
+
+    // Otherwise, return basic movie info from cast credits
     if (!castIds?.length) {
         return json({ results: [] });
     }
@@ -23,45 +48,48 @@ export const GET: RequestHandler = async ({ url }) => {
 
         const creditsData = await Promise.all(moviePromises);
 
-        // Create a map of movie IDs to their cast members from our selected list
-        const movieCastMap = new Map<number, Set<number>>();
+        // Create a map of movie IDs to their cast members and basic info
+        const movieMap = new Map<number, {
+            castIds: Set<number>;
+            title: string;
+            posterPath: string | null;
+            releaseDate: string;
+        }>();
+
         creditsData.forEach((data, index) => {
             const castId = parseInt(castIds[index]);
             data.cast.forEach((movie: any) => {
-                const existing = movieCastMap.get(movie.id) || new Set();
-                existing.add(castId);
-                movieCastMap.set(movie.id, existing);
+                const existing = movieMap.get(movie.id);
+                if (existing) {
+                    existing.castIds.add(castId);
+                } else {
+                    movieMap.set(movie.id, {
+                        castIds: new Set([castId]),
+                        title: movie.title,
+                        posterPath: movie.poster_path ? `https://image.tmdb.org/t/p/w200${movie.poster_path}` : null,
+                        releaseDate: movie.release_date
+                    });
+                }
             });
         });
 
-        // Get unique movie IDs
-        const uniqueMovieIds = Array.from(movieCastMap.keys());
-
-        // Fetch full details for each movie
-        const movieDetailsPromises = uniqueMovieIds.slice(0, 20).map(async (movieId) => {
-            const response = await fetch(
-                `${TMDB_BASE_URL}/movie/${movieId}?api_key=${TMDB_API_KEY}&language=en-US`
-            );
-            if (!response.ok) return null;
-            const movie = await response.json();
-            return {
-                id: movie.id,
-                title: movie.title,
-                overview: movie.overview,
-                posterPath: movie.poster_path ? `https://image.tmdb.org/t/p/w200${movie.poster_path}` : null,
-                releaseDate: movie.release_date,
-                castIds: Array.from(movieCastMap.get(movie.id) || [])
-            };
-        });
-
-        const movies = (await Promise.all(movieDetailsPromises))
-            .filter((movie): movie is NonNullable<typeof movie> => movie !== null)
+        // Convert map to array and sort
+        const movies = Array.from(movieMap.entries())
+            .map(([id, data]) => ({
+                id,
+                title: data.title,
+                posterPath: data.posterPath,
+                releaseDate: data.releaseDate,
+                castIds: Array.from(data.castIds),
+                isDetailLoaded: false
+            }))
             .sort((a, b) => {
                 // Sort by number of matching cast members (descending) and then by release date (descending)
                 const castDiff = b.castIds.length - a.castIds.length;
                 if (castDiff !== 0) return castDiff;
                 return new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime();
-            });
+            })
+            .slice(0, 20);
 
         return json({ results: movies });
     } catch (error) {
