@@ -246,8 +246,8 @@
         <!-- Cast Section -->
         <div class="container mx-auto px-4 py-8">
             <h2 class="text-2xl font-bold mb-4">Cast</h2>
-            <div class="overflow-x-auto p-4">
-                <div class="flex gap-4" style="min-width: min-content">
+            <div class="overflow-x-auto p-4 bg-white shadow-sm rounded-lg">
+                <div class="flex items-start gap-4" style="min-width: min-content">
                     {#each movie.cast as member (member.id)}
                         <button
                             class="flex-shrink-0 w-32 text-left transition-transform duration-200 focus:outline-none group"
