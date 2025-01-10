@@ -21,7 +21,7 @@ export const GET: RequestHandler = async ({ url }) => {
         }
 
         const data = await response.json();
-        const top5Results = data.results.slice(0, 5).map((movie: any) => ({
+        const top5Results = data.results.slice(0, 25).map((movie: any) => ({
             id: movie.id,
             title: movie.title,
             posterPath: movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : null

@@ -34,7 +34,7 @@ export const GET: RequestHandler = async ({ params }) => {
             rating: movieData.vote_average,
             releaseDate: movieData.release_date,
             runtime: movieData.runtime,
-            cast: creditsData.cast.slice(0, 10).map((member: any) => ({
+            cast: creditsData.cast.map((member: any) => ({
                 id: member.id,
                 name: member.name,
                 character: member.character,
