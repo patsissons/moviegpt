@@ -27,7 +27,9 @@
         overview?: string;
         posterPath: string | null;
         releaseDate: string;
+        vote: number;
         castIds: number[];
+        cast: Record<number, string>;
         isDetailLoaded: boolean;
         isLoading?: boolean;
     }
@@ -170,11 +172,16 @@
     }
 
     // Helper function to get cast member names for a movie
-    function getSelectedCastInMovie(movieCastIds: number[]): string {
+    function getSelectedCastInMovie(movieCast: Record<number, string>): string {
         if (!movie) return '';
         return movie.cast
-            .filter(member => movieCastIds.includes(member.id))
-            .map(member => member.name)
+            .filter(member => member.id in movieCast)
+            .map(member => {
+              const character = movieCast[member.id];
+              if (!character) return member.name;
+
+              return `${member.name} as ${character}`;
+            })
             .join(', ');
     }
 
@@ -312,13 +319,18 @@
                                     </div>
                                     <div class="flex-1 min-w-0">
                                         <h3 class="text-lg font-medium text-gray-900">
-                                            {castMovie.title}
-                                            <span class="text-sm text-gray-500 ml-2">
-                                                ({new Date(castMovie.releaseDate).getFullYear()})
-                                            </span>
+                                          <span>{castMovie.title}</span>
                                         </h3>
+                                        <h4 class="flex items-center gap-2">
+                                          <span class="text-md text-gray-500">
+                                            ({new Date(castMovie.releaseDate).getFullYear()})
+                                          </span>
+                                          <span class="inline-flex items-center bg-yellow-400 text-black text-xs px-2 py-1 rounded">
+                                            ★ {castMovie.vote.toFixed(1)}
+                                          </span>
+                                        </h4>
                                         <p class="text-sm text-gray-600 mt-1">
-                                            Starring: {getSelectedCastInMovie(castMovie.castIds)}
+                                            Starring: {getSelectedCastInMovie(castMovie.cast)}
                                         </p>
                                         {#if castMovie.isLoading}
                                             <div class="flex items-center gap-2 mt-2">

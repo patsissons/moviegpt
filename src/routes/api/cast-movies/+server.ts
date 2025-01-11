@@ -50,10 +50,11 @@ export const GET: RequestHandler = async ({ url }) => {
 
         // Create a map of movie IDs to their cast members and basic info
         const movieMap = new Map<number, {
-            castIds: Set<number>;
+            castIds: Map<number, string>;
             title: string;
             posterPath: string | null;
             releaseDate: string;
+            vote: number;
         }>();
 
         creditsData.forEach((data, index) => {
@@ -61,13 +62,14 @@ export const GET: RequestHandler = async ({ url }) => {
             data.cast.forEach((movie: any) => {
                 const existing = movieMap.get(movie.id);
                 if (existing) {
-                    existing.castIds.add(castId);
-                } else {
+                    existing.castIds.set(castId, movie.character);
+                } else if (movie.vote_count > 100) {
                     movieMap.set(movie.id, {
-                        castIds: new Set([castId]),
+                        castIds: new Map([[castId, movie.character]]),
                         title: movie.title,
                         posterPath: movie.poster_path ? `https://image.tmdb.org/t/p/w200${movie.poster_path}` : null,
-                        releaseDate: movie.release_date
+                        releaseDate: movie.release_date,
+                        vote: movie.vote_average
                     });
                 }
             });
@@ -80,7 +82,9 @@ export const GET: RequestHandler = async ({ url }) => {
                 title: data.title,
                 posterPath: data.posterPath,
                 releaseDate: data.releaseDate,
-                castIds: Array.from(data.castIds),
+                vote: data.vote,
+                castIds: Object.keys(data.castIds).map(Number),
+                cast: Object.fromEntries(data.castIds.entries()),
                 isDetailLoaded: false
             }))
             .sort((a, b) => {
@@ -88,8 +92,7 @@ export const GET: RequestHandler = async ({ url }) => {
                 const castDiff = b.castIds.length - a.castIds.length;
                 if (castDiff !== 0) return castDiff;
                 return new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime();
-            })
-            .slice(0, 20);
+            });
 
         return json({ results: movies });
     } catch (error) {
