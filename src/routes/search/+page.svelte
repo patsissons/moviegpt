@@ -33,7 +33,7 @@
       if (!response.ok) throw new Error('Search failed');
       const data = await response.json();
       movies = data.results;
-    } catch (e) {
+    } catch {
       error = 'Failed to search movies';
       movies = [];
     } finally {

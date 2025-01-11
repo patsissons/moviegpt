@@ -4,6 +4,16 @@ import type { RequestHandler } from './$types';
 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 
+type CastMovie = {
+  id: number;
+  character: string;
+  title: string;
+  poster_path: string;
+  release_date: string;
+  vote_average: number;
+  vote_count: number;
+};
+
 export const GET: RequestHandler = async ({ url }) => {
   const castIds = url.searchParams.get('ids')?.split(',');
   const movieId = url.searchParams.get('movieId');
@@ -64,7 +74,7 @@ export const GET: RequestHandler = async ({ url }) => {
 
     creditsData.forEach((data, index) => {
       const castId = parseInt(castIds[index]);
-      data.cast.forEach((movie: any) => {
+      data.cast.forEach((movie: CastMovie) => {
         const existing = movieMap.get(movie.id);
         if (existing) {
           existing.castIds.set(castId, movie.character);

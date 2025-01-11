@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
   import { onMount } from 'svelte';
 
   interface CastMember {
@@ -59,7 +59,7 @@
       // Clean up any existing observers
       observers.forEach((observer) => observer.disconnect());
       observers.clear();
-    } catch (e) {
+    } catch {
       error = 'Failed to load movie details';
     } finally {
       isLoading = false;
@@ -134,7 +134,7 @@
       if (!response.ok) throw new Error('Failed to search cast movies');
       const data = await response.json();
       castMovies = data.results;
-    } catch (e) {
+    } catch {
       castMoviesError = 'Failed to load cast movies';
       castMovies = [];
     } finally {
@@ -161,8 +161,8 @@
     castSearchTimer = setTimeout(searchCastMovies, 2500);
   }
 
-  $: if ($page.params.id) {
-    loadMovieDetails($page.params.id);
+  $: if (page.params.id) {
+    loadMovieDetails(page.params.id);
   }
 
   function formatRuntime(minutes: number): string {

@@ -4,6 +4,12 @@ import type { RequestHandler } from './$types';
 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 
+type SearchMovie = {
+  id: number;
+  title: string;
+  poster_path: string;
+};
+
 export const GET: RequestHandler = async ({ url }) => {
   const query = url.searchParams.get('q');
 
@@ -21,7 +27,7 @@ export const GET: RequestHandler = async ({ url }) => {
     }
 
     const data = await response.json();
-    const top5Results = data.results.slice(0, 25).map((movie: any) => ({
+    const top5Results = data.results.slice(0, 25).map((movie: SearchMovie) => ({
       id: movie.id,
       title: movie.title,
       posterPath: movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : null,

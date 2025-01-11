@@ -4,6 +4,13 @@ import type { RequestHandler } from './$types';
 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 
+type CastMember = {
+  id: number;
+  name: string;
+  character: string;
+  profile_path: string;
+};
+
 export const GET: RequestHandler = async ({ params }) => {
   const { id } = params;
 
@@ -34,7 +41,7 @@ export const GET: RequestHandler = async ({ params }) => {
       rating: movieData.vote_average,
       releaseDate: movieData.release_date,
       runtime: movieData.runtime,
-      cast: creditsData.cast.map((member: any) => ({
+      cast: creditsData.cast.map((member: CastMember) => ({
         id: member.id,
         name: member.name,
         character: member.character,
