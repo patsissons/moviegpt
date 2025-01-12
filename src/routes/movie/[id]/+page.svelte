@@ -11,6 +11,7 @@
 
   interface Movie {
     id: number;
+    imdbId?: string;
     title: string;
     overview: string;
     posterPath: string | null;
@@ -23,10 +24,13 @@
 
   interface CastMovie {
     id: number;
+    imdbId?: string;
     title: string;
     overview?: string;
     posterPath: string | null;
+    rating: number;
     releaseDate: string;
+    runtime: number;
     vote: number;
     castIds: number[];
     cast: Record<number, string>;
@@ -185,6 +189,12 @@
       .join(', ');
   }
 
+  function formatCast(castIds: Set<number>): string {
+    if (castIds.size >= 5) return `${castIds.size} cast`;
+
+    return Array.from(castIds).map((id) => movie?.cast.find((member) => member.id === id)?.name).join(', ');
+  }
+
   onMount(() => {
     return () => {
       clearTimeout(castSearchTimer);
@@ -195,7 +205,7 @@
   });
 </script>
 
-<div class="min-h-screen bg-gray-100">
+<div class="relative min-h-screen bg-gray-100">
   {#if isLoading}
     <div class="flex min-h-screen items-center justify-center">
       <div class="h-12 w-12 animate-spin rounded-full border-b-2 border-blue-500"></div>
@@ -207,9 +217,18 @@
       {#if movie.backdropPath}
         <div class="absolute inset-0 h-[50vh]">
           <div class="absolute inset-0 z-10 bg-black/50"></div>
-          <img src={movie.backdropPath} alt={movie.title} class="h-full w-full object-cover" />
+          <div class="absolute top-full h-full inset-0 z-10 from-black/50 to-transparent bg-gradient-to-b"></div>
+          <img src={movie.backdropPath} alt={movie.title} class="h-full w-full object-cover min-h-[400px]" />
         </div>
       {/if}
+
+      <div class="absolute top-0 right-0 z-50 p-4">
+        <a href="/search" class="block bg-cyan-500 border border-black/65 hover:brightness-110 hover:shadow-md text-white p-2 rounded-md z-10" aria-label="Search">
+          <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 512 512" height="20px" width="20px" xmlns="http://www.w3.org/2000/svg">
+            <path d="M456.69 421.39 362.6 327.3a173.81 173.81 0 0 0 34.84-104.58C397.44 126.38 319.06 48 222.72 48S48 126.38 48 222.72s78.38 174.72 174.72 174.72A173.81 173.81 0 0 0 327.3 362.6l94.09 94.09a25 25 0 0 0 35.3-35.3zM97.92 222.72a124.8 124.8 0 1 1 124.8 124.8 124.95 124.95 0 0 1-124.8-124.8z"></path>
+          </svg>
+        </a>
+      </div>
 
       <div class="container relative z-20 mx-auto px-4 py-8">
         <div class="flex flex-col items-start gap-8 md:flex-row">
@@ -227,14 +246,21 @@
           <!-- Movie Details -->
           <div class="flex-1 {movie.backdropPath ? 'md:text-white' : 'text-gray-900'}">
             <h1 class="mb-4 text-4xl font-bold">{movie.title}</h1>
-            <div class="mb-4 flex items-center gap-4">
-              <span class="inline-flex items-center rounded bg-yellow-400 px-2 py-1 text-black">
+            <div class="mb-4 flex flex-wrap items-center gap-4">
+              <span class="inline-flex items-center rounded bg-yellow-400 px-2 py-1 text-black border border-black/65">
                 ★ {movie.rating.toFixed(1)}
               </span>
-              <span>{new Date(movie.releaseDate).getFullYear()}</span>
-              <span>{formatRuntime(movie.runtime)}</span>
+              <a class="inline-flex items-center rounded bg-cyan-400 px-2 py-1 text-black border border-black/65 hover:brightness-110 hover:shadow-md" href={`https://www.themoviedb.org/movie/${movie.id}`} target="_blank">
+                TMDB
+              </a>
+              {#if movie.imdbId}
+                <a class="inline-flex items-center rounded bg-cyan-400 px-2 py-1 text-black border border-black/65 hover:brightness-110 hover:shadow-md" href={`https://www.imdb.com/title/${movie.imdbId}`} target="_blank">
+                  IMDB
+                </a>
+              {/if}
+              <span class="text-md text-gray-500 {movie.backdropPath ? 'md:text-gray-200' : ''}">{new Date(movie.releaseDate).getFullYear()} {formatRuntime(movie.runtime)}</span>
             </div>
-            <p class="mb-8 text-lg {movie.backdropPath ? 'md:text-gray-200' : 'text-gray-700'}">
+            <p class="mb-8 text-lg text-gray-700 {movie.backdropPath ? 'md:text-gray-200' : ''}">
               {movie.overview}
             </p>
           </div>
@@ -244,7 +270,16 @@
 
     <!-- Cast Section -->
     <div class="container mx-auto px-4 py-8">
-      <h2 class="mb-4 text-2xl font-bold">Cast</h2>
+      <div class="flex items-baseline gap-2 mb-4 ">
+        <h2 class="text-2xl font-bold">Cast</h2>
+        <span class="text-sm text-gray-500">
+          {#if selectedCastIds.size > 0}
+            Seaching with {selectedCastIds.size} cast
+          {:else}
+            Select cast to search for related movies
+          {/if}
+        </span>
+      </div>
       <div class="overflow-x-auto rounded-lg bg-white p-4 shadow-sm">
         <div class="flex items-start gap-4" style="min-width: min-content">
           {#each movie.cast as member (member.id)}
@@ -284,7 +319,7 @@
     <!-- Cast Movies Section -->
     {#if selectedCastIds.size > 0}
       <div class="container mx-auto border-t border-gray-200 px-4 py-8">
-        <h2 class="mb-4 text-2xl font-bold">Movies with Selected Cast</h2>
+        <h2 class="mb-4 text-2xl font-bold">Movies with {formatCast(selectedCastIds)}</h2>
         {#if isCastMoviesLoading || !hasPerformedSearch}
           <div class="flex items-center justify-center py-8">
             <div class="h-12 w-12 animate-spin rounded-full border-b-2 border-blue-500"></div>
@@ -319,14 +354,30 @@
                     <h3 class="text-lg font-medium text-gray-900">
                       <span>{castMovie.title}</span>
                     </h3>
-                    <h4 class="flex items-center gap-2">
-                      <span class="text-md text-gray-500">
-                        ({new Date(castMovie.releaseDate).getFullYear()})
-                      </span>
-                      <span
-                        class="inline-flex items-center rounded bg-yellow-400 px-2 py-1 text-xs text-black"
-                      >
+                    <h4 class="flex flex-wrap items-center gap-2">
+                      <span class="inline-flex items-center rounded bg-yellow-400 px-2 py-1 text-black border border-black/65">
                         ★ {castMovie.vote.toFixed(1)}
+                      </span>
+                      <button
+                        class="inline-flex items-center rounded bg-cyan-400 px-2 py-1 text-black border border-black/65 hover:brightness-110 hover:shadow-md"
+                        on:click={(e) => { e.preventDefault(); window.open(`https://www.themoviedb.org/movie/${castMovie.id}`, '_blank') }}
+                      >
+                        TMDB
+                      </button>
+                      {#if castMovie.imdbId}
+                        <button
+                          class="inline-flex items-center rounded bg-cyan-400 px-2 py-1 text-black border border-black/65 hover:brightness-110 hover:shadow-md"
+                          on:click={(e) => { e.preventDefault(); window.open(`https://www.imdb.com/title/${castMovie.imdbId}`, '_blank') }}
+                        >
+                          IMDB
+                        </button>
+                      {/if}
+                      <span class="text-md text-gray-500">
+                        {#if castMovie.runtime}
+                          {new Date(castMovie.releaseDate).getFullYear()} {formatRuntime(castMovie.runtime)}
+                        {:else}
+                          {new Date(castMovie.releaseDate).getFullYear()}
+                        {/if}
                       </span>
                     </h4>
                     <p class="mt-1 text-sm text-gray-600">

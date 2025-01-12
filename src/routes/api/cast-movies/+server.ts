@@ -29,12 +29,15 @@ export const GET: RequestHandler = async ({ url }) => {
       return json({
         movie: {
           id: movie.id,
+          imdbId: movie.imdb_id,
           title: movie.title,
           overview: movie.overview,
           posterPath: movie.poster_path
             ? `https://image.tmdb.org/t/p/w200${movie.poster_path}`
             : null,
+          rating: movie.vote_average,
           releaseDate: movie.release_date,
+          runtime: movie.runtime,
         },
       });
     } catch (error) {

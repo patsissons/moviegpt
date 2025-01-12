@@ -30,6 +30,7 @@ export const GET: RequestHandler = async ({ params }) => {
 
     const movie = {
       id: movieData.id,
+      imdbId: movieData.imdb_id,
       title: movieData.title,
       overview: movieData.overview,
       posterPath: movieData.poster_path
