@@ -4,10 +4,19 @@
   import { onMount } from 'svelte';
   import { browser } from '$app/environment';
 
+  type SearchMovie = {
+    id: number;
+    title: string;
+    posterPath?: string;
+    releaseDate?: string;
+    voteAverage?: number;
+    voteCount?: number;
+  };
+
   let searchInput: string = '';
   let debounceTimer: NodeJS.Timeout;
   let isLoading = false;
-  let movies: Array<{ id: number; title: string; posterPath: string | null }> = [];
+  let movies: SearchMovie[] = [];
   let error: string | null = null;
 
   // Initialize search input from URL query parameter
@@ -54,6 +63,12 @@
     }, 1500);
   }
 
+  function formatTitle(movie: SearchMovie) {
+    if (!movie.releaseDate) return movie.title;
+
+    return `(${new Date(movie.releaseDate).getFullYear()}) ${movie.title}`;
+  }
+
   onMount(() => {
     return () => {
       clearTimeout(debounceTimer);
@@ -87,7 +102,7 @@
           href="/movie/{movie.id}"
           class="flex transform flex-col items-center transition-transform hover:scale-105"
         >
-          <div class="mb-2 h-72 w-48">
+          <div class="relative mb-2 h-72 w-48">
             {#if movie.posterPath}
               <img
                 src={movie.posterPath}
@@ -99,9 +114,16 @@
                 <span class="text-gray-400">No poster</span>
               </div>
             {/if}
+            {#if movie.voteAverage && movie.voteCount}
+              <div class="absolute -top-1 -right-1">
+                <span class="inline-flex items-center rounded {movie.voteCount > 100 ? 'bg-yellow-400' : 'bg-gray-200'} px-2 py-1 text-black border border-black/65 shadow-md">
+                  ★ {movie.voteAverage.toFixed(1)}
+                </span>
+              </div>
+            {/if}
           </div>
           <h3 class="max-w-[12rem] truncate text-center text-sm font-medium text-gray-800">
-            {movie.title}
+            {formatTitle(movie)}
           </h3>
         </a>
       {/each}

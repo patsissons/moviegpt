@@ -81,7 +81,7 @@ export const GET: RequestHandler = async ({ url }) => {
         const existing = movieMap.get(movie.id);
         if (existing) {
           existing.castIds.set(castId, movie.character);
-        } else if (movie.vote_count > 100) {
+        } else if (movie.vote_average && movie.vote_count && movie.vote_count > 100) {
           movieMap.set(movie.id, {
             castIds: new Map([[castId, movie.character]]),
             title: movie.title,
