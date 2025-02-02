@@ -19,9 +19,13 @@
   let movies: SearchMovie[] = [];
   let error: string | null = null;
 
-  // Initialize search input from URL query parameter
-  $: if (browser && $page.url.searchParams.get('q')) {
-    searchInput = $page.url.searchParams.get('q') || '';
+  $: if (browser) {
+    const queryParam = $page.url.searchParams.get('q');
+    if (queryParam) {
+      document.title = `Search - ${queryParam}`;
+    } else {
+      document.title = 'Search - MovieGPT';
+    }
   }
 
   // Watch for URL query parameter changes and trigger search

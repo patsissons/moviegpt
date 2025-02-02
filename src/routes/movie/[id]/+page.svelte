@@ -277,6 +277,21 @@
       observers.clear();
     };
   });
+
+  // Update document title when movie changes
+  $: if (browser && movie) {
+    const year = new Date(movie.releaseDate).getFullYear();
+    const castCount = selectedCastIds.size;
+    let title = `${movie.title} (${year})`;
+
+    if (castCount > 0) {
+      title = `${title} — ${castCount} Cast`;
+    }
+
+    document.title = title;
+  } else if (browser) {
+    document.title = 'MovieGPT';
+  }
 </script>
 
 <div class="relative min-h-screen bg-gray-100">
@@ -347,7 +362,7 @@
 
     <!-- Cast Section -->
     <div class="container mx-auto px-4 py-8">
-      <div class="flex items-baseline gap-2 mb-4 ">
+      <div class="flex items-baseline justify-between gap-2 mb-4">
         <h2 class="text-2xl font-bold">Cast</h2>
         <span class="text-sm text-gray-500">
           {#if selectedCastIds.size > 0}
