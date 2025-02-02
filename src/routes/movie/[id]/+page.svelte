@@ -363,7 +363,7 @@
     <!-- Cast Section -->
     <div class="container mx-auto px-4 py-8">
       <div class="flex items-baseline justify-between gap-2 mb-4">
-        <h2 class="text-2xl font-bold">Cast</h2>
+        <h2 class="text-2xl font-bold">{movie.cast.length} Cast</h2>
         <span class="text-sm text-gray-500">
           {#if selectedCastIds.size > 0}
             Seaching with {selectedCastIds.size} cast

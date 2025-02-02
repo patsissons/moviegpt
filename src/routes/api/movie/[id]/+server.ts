@@ -42,14 +42,14 @@ export const GET: RequestHandler = async ({ params }) => {
       rating: movieData.vote_average,
       releaseDate: movieData.release_date,
       runtime: movieData.runtime,
-      cast: creditsData.cast.map((member: CastMember) => ({
-        id: member.id,
-        name: member.name,
-        character: member.character,
-        profilePath: member.profile_path
-          ? `https://image.tmdb.org/t/p/w185${member.profile_path}`
-          : null,
-      })),
+      cast: creditsData.cast
+        .filter((member: CastMember) => member.profile_path)
+        .map((member: CastMember) => ({
+          id: member.id,
+          name: member.name,
+          character: member.character,
+          profilePath: `https://image.tmdb.org/t/p/w185${member.profile_path}`,
+        })),
     };
 
     return json({ movie });
