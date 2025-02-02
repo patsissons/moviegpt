@@ -412,7 +412,7 @@
     {#if selectedCastIds.size > 0}
       <div class="container mx-auto border-t border-gray-200 px-4 py-8">
         <div class="mb-4 flex items-end justify-between gap-4">
-          <h2 class="text-2xl font-bold">Movies with {formatCast(selectedCastIds)}</h2>
+          <h2 class="text-2xl font-bold">{castMovies.length} Movies with {formatCast(selectedCastIds)}</h2>
           <div class="flex rounded-lg border border-gray-200 bg-white">
             <button
               class="w-14 px-3 py-1 text-sm text-center {sortBy === 'year' ? 'bg-blue-500 text-white' : 'text-gray-600 hover:bg-gray-100'} rounded-l-lg transition-colors"
