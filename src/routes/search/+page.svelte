@@ -28,9 +28,10 @@
     }
   }
 
+  $: queryParam = $page.url.searchParams.get('q');
+
   // Watch for URL query parameter changes and trigger search
   $: if (browser) {
-    const queryParam = $page.url.searchParams.get('q');
     if (queryParam) {
       searchMovies(queryParam);
     } else {
@@ -89,6 +90,25 @@
     };
   });
 </script>
+
+<svelte:head>
+  {#if queryParam}
+    <meta property="og:title" content={`Searching for ${queryParam} - MovieGPT`} />
+    <meta property="og:description" content={`Searching for movies with "${queryParam}" - MovieGPT`} />
+    <meta name="twitter:title" content={`Searching for ${queryParam} - MovieGPT`} />
+    <meta name="twitter:description" content={`Searching for movies with "${queryParam}" - MovieGPT`} />
+  {:else}
+    <meta property="og:title" content="Search - MovieGPT" />
+    <meta property="og:description" content="Search for movies - MovieGPT" />
+    <meta name="twitter:title" content="Search - MovieGPT" />
+    <meta name="twitter:description" content="Search for movies - MovieGPT" />
+  {/if}
+
+  <meta property="og:image" content="https://movies.place/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:url" content="{$page.url.href}" />
+</svelte:head>
 
 <div class="flex min-h-screen flex-col items-center justify-start bg-gray-100 p-4">
   <div class="mb-8 w-full max-w-xl">

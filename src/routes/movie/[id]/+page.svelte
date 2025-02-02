@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { page } from '$app/state';
+  import { page } from '$app/stores';
   import { onMount } from 'svelte';
   import { browser } from '$app/environment';
   import { goto } from '$app/navigation';
@@ -57,15 +57,15 @@
 
   // Load initial state from URL
   $: if (browser && isInitialLoad && movie) {
-    const searchParams = new URLSearchParams(page.url.search);
+    const searchParams = new URLSearchParams($page.url.search);
     const castParam = searchParams.get('cast');
     const sortParam = searchParams.get('sort') as SortBy;
 
     if (castParam) {
       const castIds = castParam.split(',').map(Number);
       // Only select cast IDs that exist in the current movie
-      castIds.forEach(id => {
-        if (movie?.cast.some(member => member.id === id)) {
+      castIds.forEach((id) => {
+        if (movie?.cast.some((member) => member.id === id)) {
           selectedCastIds.add(id);
         }
       });
@@ -239,8 +239,8 @@
     sortBy = newSort;
   }
 
-  $: if (page.params.id) {
-    loadMovieDetails(page.params.id);
+  $: if ($page.params.id) {
+    loadMovieDetails($page.params.id);
   }
 
   function formatRuntime(minutes: number): string {
@@ -266,7 +266,9 @@
   function formatCast(castIds: Set<number>): string {
     if (castIds.size >= 5) return `${castIds.size} cast`;
 
-    return Array.from(castIds).map((id) => movie?.cast.find((member) => member.id === id)?.name).join(', ');
+    return Array.from(castIds)
+      .map((id) => movie?.cast.find((member) => member.id === id)?.name)
+      .join(', ');
   }
 
   onMount(() => {
@@ -292,7 +294,48 @@
   } else if (browser) {
     document.title = 'MovieGPT';
   }
+
+  function getMetaDescription(movie: Movie, selectedCastIds: Set<number>): string {
+    let description = `${movie.title} (${new Date(movie.releaseDate).getFullYear()}) • ★ ${movie.rating.toFixed(1)} • ${formatRuntime(movie.runtime)}`;
+
+    const selectedCastNames = movie.cast
+      .filter((member) => selectedCastIds.has(member.id))
+      .map((member) => member.name);
+    if (selectedCastNames.length > 0) {
+      description += `\nMovies with: ${selectedCastNames.join(', ')}`;
+    }
+
+    return description;
+  }
 </script>
+
+<svelte:head>
+  {#if movie}
+    <meta property="og:title" content={movie.title} />
+    <meta property="og:description" content={getMetaDescription(movie, selectedCastIds)} />
+    <meta name="twitter:title" content={movie.title} />
+    <meta name="twitter:description" content={getMetaDescription(movie, selectedCastIds)} />
+    {#if movie.backdropPath}
+      <meta property="og:image" content={movie.backdropPath} />
+      <meta name="twitter:image" content={movie.backdropPath} />
+    {/if}
+  {:else}
+    <meta property="og:title" content="MovieGPT - Discover Movies Through Cast Connections" />
+    <meta
+      property="og:description"
+      content="Explore movies and discover new films through cast member connections. Find movies where your favorite actors work together."
+    />
+    <meta name="twitter:title" content="MovieGPT - Discover Movies Through Cast Connections" />
+    <meta
+      name="twitter:description"
+      content="Explore movies and discover new films through cast member connections. Find movies where your favorite actors work together."
+    />
+    <meta property="og:image" content="https://movies.place/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+  {/if}
+  <meta property="og:url" content="{$page.url.href}" />
+</svelte:head>
 
 <div class="relative min-h-screen bg-gray-100">
   {#if isLoading}
@@ -306,15 +349,35 @@
       {#if movie.backdropPath}
         <div class="absolute inset-0 h-[50vh]">
           <div class="absolute inset-0 z-10 bg-black/50"></div>
-          <div class="absolute top-full h-full inset-0 z-10 from-black/50 to-transparent bg-gradient-to-b"></div>
-          <img src={movie.backdropPath} alt={movie.title} class="h-full w-full object-cover min-h-[400px]" />
+          <div
+            class="absolute inset-0 top-full z-10 h-full bg-gradient-to-b from-black/50 to-transparent"
+          ></div>
+          <img
+            src={movie.backdropPath}
+            alt={movie.title}
+            class="h-full min-h-[400px] w-full object-cover"
+          />
         </div>
       {/if}
 
-      <div class="absolute top-0 right-0 z-50 p-4">
-        <a href="/search" class="block bg-cyan-500 border border-black/65 hover:brightness-110 hover:shadow-md text-white p-2 rounded-md z-10" aria-label="Search">
-          <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 512 512" height="20px" width="20px" xmlns="http://www.w3.org/2000/svg">
-            <path d="M456.69 421.39 362.6 327.3a173.81 173.81 0 0 0 34.84-104.58C397.44 126.38 319.06 48 222.72 48S48 126.38 48 222.72s78.38 174.72 174.72 174.72A173.81 173.81 0 0 0 327.3 362.6l94.09 94.09a25 25 0 0 0 35.3-35.3zM97.92 222.72a124.8 124.8 0 1 1 124.8 124.8 124.95 124.95 0 0 1-124.8-124.8z"></path>
+      <div class="absolute right-0 top-0 z-50 p-4">
+        <a
+          href="/search"
+          class="z-10 block rounded-md border border-black/65 bg-cyan-500 p-2 text-white hover:shadow-md hover:brightness-110"
+          aria-label="Search"
+        >
+          <svg
+            stroke="currentColor"
+            fill="currentColor"
+            stroke-width="0"
+            viewBox="0 0 512 512"
+            height="20px"
+            width="20px"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M456.69 421.39 362.6 327.3a173.81 173.81 0 0 0 34.84-104.58C397.44 126.38 319.06 48 222.72 48S48 126.38 48 222.72s78.38 174.72 174.72 174.72A173.81 173.81 0 0 0 327.3 362.6l94.09 94.09a25 25 0 0 0 35.3-35.3zM97.92 222.72a124.8 124.8 0 1 1 124.8 124.8 124.95 124.95 0 0 1-124.8-124.8z"
+            ></path>
           </svg>
         </a>
       </div>
@@ -336,21 +399,35 @@
           <div class="flex-1 {movie.backdropPath ? 'md:text-white' : 'text-gray-900'}">
             <h1 class="mb-4 text-4xl font-bold">{movie.title}</h1>
             <div class="mb-4 flex flex-wrap items-center gap-4">
-              <span class="inline-flex items-center rounded bg-yellow-400 px-2 py-1 text-black border border-black/65">
+              <span
+                class="inline-flex items-center rounded border border-black/65 bg-yellow-400 px-2 py-1 text-black"
+              >
                 ★ {movie.rating.toFixed(1)}
               </span>
-              <a class="inline-flex items-center rounded bg-cyan-400 px-2 py-1 text-black border border-black/65 hover:brightness-110 hover:shadow-md" href={`https://www.themoviedb.org/movie/${movie.id}`} target="_blank">
+              <a
+                class="inline-flex items-center rounded border border-black/65 bg-cyan-400 px-2 py-1 text-black hover:shadow-md hover:brightness-110"
+                href={`https://www.themoviedb.org/movie/${movie.id}`}
+                target="_blank"
+              >
                 TMDB
               </a>
               {#if movie.imdbId}
-                <a class="inline-flex items-center rounded bg-cyan-400 px-2 py-1 text-black border border-black/65 hover:brightness-110 hover:shadow-md" href={`https://www.imdb.com/title/${movie.imdbId}`} target="_blank">
+                <a
+                  class="inline-flex items-center rounded border border-black/65 bg-cyan-400 px-2 py-1 text-black hover:shadow-md hover:brightness-110"
+                  href={`https://www.imdb.com/title/${movie.imdbId}`}
+                  target="_blank"
+                >
                   IMDB
                 </a>
               {/if}
-              <span class="inline-flex items-center rounded bg-gray-200 px-2 py-1 text-black border border-black/65">
+              <span
+                class="inline-flex items-center rounded border border-black/65 bg-gray-200 px-2 py-1 text-black"
+              >
                 {new Date(movie.releaseDate).getFullYear()}
               </span>
-              <span class="text-md text-gray-500 {movie.backdropPath ? 'md:text-gray-200' : ''}">{formatRuntime(movie.runtime)}</span>
+              <span class="text-md text-gray-500 {movie.backdropPath ? 'md:text-gray-200' : ''}"
+                >{formatRuntime(movie.runtime)}</span
+              >
             </div>
             <p class="mb-8 text-lg text-gray-700 {movie.backdropPath ? 'md:text-gray-200' : ''}">
               {movie.overview}
@@ -362,7 +439,7 @@
 
     <!-- Cast Section -->
     <div class="container mx-auto px-4 py-8">
-      <div class="flex items-baseline justify-between gap-2 mb-4">
+      <div class="mb-4 flex items-baseline justify-between gap-2">
         <h2 class="text-2xl font-bold">{movie.cast.length} Cast</h2>
         <span class="text-sm text-gray-500">
           {#if selectedCastIds.size > 0}
@@ -412,19 +489,25 @@
     {#if selectedCastIds.size > 0}
       <div class="container mx-auto border-t border-gray-200 px-4 py-8">
         <div class="mb-4 flex items-end justify-between gap-4">
-          <h2 class="text-2xl font-bold">{castMovies.length} Movies with {formatCast(selectedCastIds)}</h2>
+          <h2 class="text-2xl font-bold">
+            {castMovies.length} Movies with {formatCast(selectedCastIds)}
+          </h2>
           <div class="flex rounded-lg border border-gray-200 bg-white">
             <button
-              class="w-14 px-3 py-1 text-sm text-center {sortBy === 'year' ? 'bg-blue-500 text-white' : 'text-gray-600 hover:bg-gray-100'} rounded-l-lg transition-colors"
+              class="w-14 px-3 py-1 text-center text-sm {sortBy === 'year'
+                ? 'bg-blue-500 text-white'
+                : 'text-gray-600 hover:bg-gray-100'} rounded-l-lg transition-colors"
               on:click={() => updateSort('year')}
             >
               Year
             </button>
             <button
-              class="w-14 px-3 py-1 text-sm text-center {sortBy === 'rating' ? 'bg-blue-500 text-white' : 'text-gray-600 hover:bg-gray-100'} rounded-r-lg transition-colors"
+              class="w-14 px-3 py-1 text-center text-sm {sortBy === 'rating'
+                ? 'bg-blue-500 text-white'
+                : 'text-gray-600 hover:bg-gray-100'} rounded-r-lg transition-colors"
               on:click={() => updateSort('rating')}
             >
-            ★
+              ★
             </button>
           </div>
         </div>
@@ -464,24 +547,34 @@
                       <span>{castMovie.title}</span>
                     </h3>
                     <h4 class="flex flex-wrap items-center gap-2">
-                      <span class="inline-flex items-center rounded bg-yellow-400 px-2 py-1 text-black border border-black/65">
+                      <span
+                        class="inline-flex items-center rounded border border-black/65 bg-yellow-400 px-2 py-1 text-black"
+                      >
                         ★ {castMovie.vote.toFixed(1)}
                       </span>
                       <button
-                        class="inline-flex items-center rounded bg-cyan-400 px-2 py-1 text-black border border-black/65 hover:brightness-110 hover:shadow-md"
-                        on:click={(e) => { e.preventDefault(); window.open(`https://www.themoviedb.org/movie/${castMovie.id}`, '_blank') }}
+                        class="inline-flex items-center rounded border border-black/65 bg-cyan-400 px-2 py-1 text-black hover:shadow-md hover:brightness-110"
+                        on:click={(e) => {
+                          e.preventDefault();
+                          window.open(`https://www.themoviedb.org/movie/${castMovie.id}`, '_blank');
+                        }}
                       >
                         TMDB
                       </button>
                       {#if castMovie.imdbId}
                         <button
-                          class="inline-flex items-center rounded bg-cyan-400 px-2 py-1 text-black border border-black/65 hover:brightness-110 hover:shadow-md"
-                          on:click={(e) => { e.preventDefault(); window.open(`https://www.imdb.com/title/${castMovie.imdbId}`, '_blank') }}
+                          class="inline-flex items-center rounded border border-black/65 bg-cyan-400 px-2 py-1 text-black hover:shadow-md hover:brightness-110"
+                          on:click={(e) => {
+                            e.preventDefault();
+                            window.open(`https://www.imdb.com/title/${castMovie.imdbId}`, '_blank');
+                          }}
                         >
                           IMDB
                         </button>
                       {/if}
-                      <span class="inline-flex items-center rounded bg-gray-200 px-2 py-1 text-black border border-black/65">
+                      <span
+                        class="inline-flex items-center rounded border border-black/65 bg-gray-200 px-2 py-1 text-black"
+                      >
                         {new Date(castMovie.releaseDate).getFullYear()}
                       </span>
                       {#if castMovie.runtime}
