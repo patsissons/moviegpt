@@ -38,6 +38,8 @@
     isLoading?: boolean;
   }
 
+  type SortBy = 'year' | 'rating';
+
   let movie: Movie | null = null;
   let error: string | null = null;
   let isLoading = true;
@@ -48,6 +50,7 @@
   let castMoviesError: string | null = null;
   let castSearchTimer: NodeJS.Timeout;
   let observers = new Map<number, IntersectionObserver>();
+  let sortBy: SortBy = 'year';
 
   async function loadMovieDetails(id: string) {
     try {
@@ -137,7 +140,7 @@
       const response = await fetch(`/api/cast-movies?ids=${Array.from(selectedCastIds).join(',')}`);
       if (!response.ok) throw new Error('Failed to search cast movies');
       const data = await response.json();
-      castMovies = data.results;
+      castMovies = sortCastMovies(data.results, sortBy);
     } catch {
       castMoviesError = 'Failed to load cast movies';
       castMovies = [];
@@ -145,6 +148,26 @@
       isCastMoviesLoading = false;
       hasPerformedSearch = true;
     }
+  }
+
+  function sortCastMovies(movies: CastMovie[], sort: SortBy): CastMovie[] {
+    return [...movies].sort((a, b) => {
+      // First sort by number of matching cast members
+      const castDiff = b.castIds.length - a.castIds.length;
+      if (castDiff !== 0) return castDiff;
+
+      // Then sort by selected criteria
+      if (sortBy === 'year') {
+        return new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime();
+      } else {
+        return b.vote - a.vote;
+      }
+    });
+  }
+
+  // Watch for sort changes and resort movies
+  $: if (castMovies.length > 0) {
+    castMovies = sortCastMovies(castMovies, sortBy);
   }
 
   function toggleCastSelection(castId: number) {
@@ -258,7 +281,10 @@
                   IMDB
                 </a>
               {/if}
-              <span class="text-md text-gray-500 {movie.backdropPath ? 'md:text-gray-200' : ''}">{new Date(movie.releaseDate).getFullYear()} {formatRuntime(movie.runtime)}</span>
+              <span class="inline-flex items-center rounded bg-gray-200 px-2 py-1 text-black border border-black/65">
+                {new Date(movie.releaseDate).getFullYear()}
+              </span>
+              <span class="text-md text-gray-500 {movie.backdropPath ? 'md:text-gray-200' : ''}">{formatRuntime(movie.runtime)}</span>
             </div>
             <p class="mb-8 text-lg text-gray-700 {movie.backdropPath ? 'md:text-gray-200' : ''}">
               {movie.overview}
@@ -319,7 +345,24 @@
     <!-- Cast Movies Section -->
     {#if selectedCastIds.size > 0}
       <div class="container mx-auto border-t border-gray-200 px-4 py-8">
-        <h2 class="mb-4 text-2xl font-bold">Movies with {formatCast(selectedCastIds)}</h2>
+        <div class="mb-4 flex items-end justify-between gap-4">
+          <h2 class="text-2xl font-bold">Movies with {formatCast(selectedCastIds)}</h2>
+          <div class="flex rounded-lg border border-gray-200 bg-white">
+            <button
+              class="w-14 px-3 py-1 text-sm text-center {sortBy === 'year' ? 'bg-blue-500 text-white' : 'text-gray-600 hover:bg-gray-100'} rounded-l-lg transition-colors"
+              on:click={() => sortBy = 'year'}
+            >
+              Year
+            </button>
+            <button
+              class="w-14 px-3 py-1 text-sm text-center {sortBy === 'rating' ? 'bg-blue-500 text-white' : 'text-gray-600 hover:bg-gray-100'} rounded-r-lg transition-colors"
+              on:click={() => sortBy = 'rating'}
+            >
+            ★
+            </button>
+          </div>
+        </div>
+
         {#if isCastMoviesLoading || !hasPerformedSearch}
           <div class="flex items-center justify-center py-8">
             <div class="h-12 w-12 animate-spin rounded-full border-b-2 border-blue-500"></div>
@@ -372,13 +415,14 @@
                           IMDB
                         </button>
                       {/if}
-                      <span class="text-md text-gray-500">
-                        {#if castMovie.runtime}
-                          {new Date(castMovie.releaseDate).getFullYear()} {formatRuntime(castMovie.runtime)}
-                        {:else}
-                          {new Date(castMovie.releaseDate).getFullYear()}
-                        {/if}
+                      <span class="inline-flex items-center rounded bg-gray-200 px-2 py-1 text-black border border-black/65">
+                        {new Date(castMovie.releaseDate).getFullYear()}
                       </span>
+                      {#if castMovie.runtime}
+                        <span class="text-md text-gray-500">
+                          {formatRuntime(castMovie.runtime)}
+                        </span>
+                      {/if}
                     </h4>
                     <p class="mt-1 text-sm text-gray-600">
                       Starring: {getSelectedCastInMovie(castMovie.cast)}
