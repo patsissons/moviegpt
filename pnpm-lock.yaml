@@ -11,9 +11,6 @@ importers:
       '@eslint/compat':
         specifier: ^1.2.3
         version: 1.2.4(eslint@9.17.0(jiti@1.21.7))
-      '@fontsource/inter':
-        specifier: ^5.1.1
-        version: 5.1.1
       '@sveltejs/adapter-cloudflare':
         specifier: ^4.8.0
         version: 4.9.0(@sveltejs/kit@2.15.2(@sveltejs/vite-plugin-svelte@4.0.4(svelte@5.17.1)(vite@5.4.11(@types/node@22.10.5)))(svelte@5.17.1)(vite@5.4.11(@types/node@22.10.5)))(wrangler@3.100.0(@cloudflare/workers-types@4.20241230.0))
@@ -605,9 +602,6 @@ packages:
   '@fastify/busboy@2.1.1':
     resolution: {integrity: sha512-vBZP4NlzfOlerQTnba4aqZoMhE/a9HY7HRqoOPaETQcSQuWEIyZMHGfVu6w9wGtGK5fED5qRs2DteVCjOH60sA==}
     engines: {node: '>=14'}
-
-  '@fontsource/inter@5.1.1':
-    resolution: {integrity: sha512-weN3E+rq0Xb3Z93VHJ+Rc7WOQX9ETJPTAJ+gDcaMHtjft67L58sfS65rAjC5tZUXQ2FdZ/V1/sSzCwZ6v05kJw==}
 
   '@humanfs/core@0.19.1':
     resolution: {integrity: sha512-5DyQ4+1JEUzejeK1JGICcideyfUbGixgS9jNgex5nqkW+cY7WZhxBigmieN5Qnw9ZosSNVC9KQKyb+GUaGyKUA==}
@@ -2515,8 +2509,6 @@ snapshots:
       levn: 0.4.1
 
   '@fastify/busboy@2.1.1': {}
-
-  '@fontsource/inter@5.1.1': {}
 
   '@humanfs/core@0.19.1': {}
 

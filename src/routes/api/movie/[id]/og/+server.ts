@@ -1,7 +1,4 @@
 import { error } from '@sveltejs/kit';
-import { readFile } from 'fs/promises';
-import Inter400Url from '@fontsource/inter/files/inter-latin-400-normal.woff';
-import Inter700Url from '@fontsource/inter/files/inter-latin-700-normal.woff';
 import type { RequestHandler } from './$types';
 import { TMDB_API_KEY } from '$env/static/private';
 import sharp from 'sharp';
@@ -9,8 +6,6 @@ import satori from 'satori';
 import { html } from 'satori-html';
 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
-const inter400 = await readFile("." + Inter400Url);
-const inter700 = await readFile("." + Inter700Url);
 
 type CastMember = {
   id: number;
@@ -24,6 +19,9 @@ export const GET: RequestHandler = async ({ params, url }) => {
   const castParam = url.searchParams.get('cast');
 
   try {
+    const inter400 = await fetch("https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-400-normal.woff").then(res => res.arrayBuffer());
+    const inter700 = await fetch("https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-700-normal.woff").then(res => res.arrayBuffer());
+
     // Fetch movie details and cast info
     const [movieResponse, creditsResponse] = await Promise.all([
       fetch(`${TMDB_BASE_URL}/movie/${id}?api_key=${TMDB_API_KEY}&language=en-US`),
