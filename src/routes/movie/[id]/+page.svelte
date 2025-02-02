@@ -3,6 +3,7 @@
   import { onMount } from 'svelte';
   import { browser } from '$app/environment';
   import { goto } from '$app/navigation';
+  import type { PageData } from './$types';
 
   interface CastMember {
     id: number;
@@ -42,48 +43,20 @@
 
   type SortBy = 'year' | 'rating';
 
-  let movie: Movie | null = null;
+  export let data: PageData;
+  let movie: Movie = data.movie;
   let error: string | null = null;
-  let isLoading = true;
-  let selectedCastIds = new Set<number>();
-  let castMovies: CastMovie[] = [];
+  let selectedCastIds = new Set<number>(data.selectedCastIds);
+  let castMovies: CastMovie[] = data.castMovies;
   let isCastMoviesLoading = false;
-  let hasPerformedSearch = false;
+  let hasPerformedSearch = data.castMovies.length > 0;
   let castMoviesError: string | null = null;
   let castSearchTimer: NodeJS.Timeout;
   let observers = new Map<number, IntersectionObserver>();
-  let sortBy: SortBy = 'year';
-  let isInitialLoad = true;
-
-  // Load initial state from URL
-  $: if (browser && isInitialLoad && movie) {
-    const searchParams = new URLSearchParams($page.url.search);
-    const castParam = searchParams.get('cast');
-    const sortParam = searchParams.get('sort') as SortBy;
-
-    if (castParam) {
-      const castIds = castParam.split(',').map(Number);
-      // Only select cast IDs that exist in the current movie
-      castIds.forEach((id) => {
-        if (movie?.cast.some((member) => member.id === id)) {
-          selectedCastIds.add(id);
-        }
-      });
-      selectedCastIds = selectedCastIds;
-    }
-
-    if (sortParam && (sortParam === 'year' || sortParam === 'rating')) {
-      sortBy = sortParam;
-    }
-
-    isInitialLoad = false;
-    if (selectedCastIds.size > 0) {
-      searchCastMovies();
-    }
-  }
+  let sortBy: SortBy = data.sortBy;
 
   // Update URL when selection or sort changes
-  $: if (browser && !isInitialLoad) {
+  $: if (browser) {
     const url = new URL(window.location.href);
     if (selectedCastIds.size > 0) {
       url.searchParams.set('cast', Array.from(selectedCastIds).join(','));
@@ -93,31 +66,6 @@
       url.searchParams.delete('sort');
     }
     goto(url.toString(), { replaceState: true, keepFocus: true, noScroll: true });
-  }
-
-  async function loadMovieDetails(id: string) {
-    try {
-      const response = await fetch(`/api/movie/${id}`);
-      if (!response.ok) throw new Error('Failed to load movie details');
-      const data = await response.json();
-      movie = data.movie;
-
-      if (!isInitialLoad) {
-        // Only clear selections when navigating to a new movie, not on initial load
-        selectedCastIds.clear();
-        selectedCastIds = selectedCastIds;
-        castMovies = [];
-        hasPerformedSearch = false;
-      }
-
-      // Clean up any existing observers
-      observers.forEach((observer) => observer.disconnect());
-      observers.clear();
-    } catch {
-      error = 'Failed to load movie details';
-    } finally {
-      isLoading = false;
-    }
   }
 
   async function loadCastMovieDetails(castMovie: CastMovie) {
@@ -239,10 +187,6 @@
     sortBy = newSort;
   }
 
-  $: if ($page.params.id) {
-    loadMovieDetails($page.params.id);
-  }
-
   function formatRuntime(minutes: number): string {
     const hours = Math.floor(minutes / 60);
     const remainingMinutes = minutes % 60;
@@ -338,23 +282,23 @@
 </svelte:head>
 
 <div class="relative min-h-screen bg-gray-100">
-  {#if isLoading}
+  {#if !data.movie}
     <div class="flex min-h-screen items-center justify-center">
       <div class="h-12 w-12 animate-spin rounded-full border-b-2 border-blue-500"></div>
     </div>
   {:else if error}
     <div class="p-4 text-center text-red-500">{error}</div>
-  {:else if movie}
+  {:else}
     <div class="relative overflow-clip">
-      {#if movie.backdropPath}
+      {#if data.movie.backdropPath}
         <div class="absolute inset-0 h-[50vh]">
           <div class="absolute inset-0 z-10 bg-black/50"></div>
           <div
             class="absolute inset-0 top-full z-10 h-full bg-gradient-to-b from-black/50 to-transparent"
           ></div>
           <img
-            src={movie.backdropPath}
-            alt={movie.title}
+            src={data.movie.backdropPath}
+            alt={data.movie.title}
             class="h-full min-h-[400px] w-full object-cover"
           />
         </div>
@@ -386,8 +330,8 @@
         <div class="flex flex-col items-start gap-8 md:flex-row">
           <!-- Movie Poster -->
           <div class="w-64 flex-shrink-0">
-            {#if movie.posterPath}
-              <img src={movie.posterPath} alt={movie.title} class="w-full rounded-lg shadow-xl" />
+            {#if data.movie.posterPath}
+              <img src={data.movie.posterPath} alt={data.movie.title} class="w-full rounded-lg shadow-xl" />
             {:else}
               <div class="flex h-96 w-full items-center justify-center rounded-lg bg-gray-200">
                 <span class="text-gray-400">No poster</span>
@@ -396,25 +340,25 @@
           </div>
 
           <!-- Movie Details -->
-          <div class="flex-1 {movie.backdropPath ? 'md:text-white' : 'text-gray-900'}">
-            <h1 class="mb-4 text-4xl font-bold">{movie.title}</h1>
+          <div class="flex-1 {data.movie.backdropPath ? 'md:text-white' : 'text-gray-900'}">
+            <h1 class="mb-4 text-4xl font-bold">{data.movie.title}</h1>
             <div class="mb-4 flex flex-wrap items-center gap-4">
               <span
                 class="inline-flex items-center rounded border border-black/65 bg-yellow-400 px-2 py-1 text-black"
               >
-                ★ {movie.rating.toFixed(1)}
+                ★ {data.movie.rating.toFixed(1)}
               </span>
               <a
                 class="inline-flex items-center rounded border border-black/65 bg-cyan-400 px-2 py-1 text-black hover:shadow-md hover:brightness-110"
-                href={`https://www.themoviedb.org/movie/${movie.id}`}
+                href={`https://www.themoviedb.org/movie/${data.movie.id}`}
                 target="_blank"
               >
                 TMDB
               </a>
-              {#if movie.imdbId}
+              {#if data.movie.imdbId}
                 <a
                   class="inline-flex items-center rounded border border-black/65 bg-cyan-400 px-2 py-1 text-black hover:shadow-md hover:brightness-110"
-                  href={`https://www.imdb.com/title/${movie.imdbId}`}
+                  href={`https://www.imdb.com/title/${data.movie.imdbId}`}
                   target="_blank"
                 >
                   IMDB
@@ -423,14 +367,14 @@
               <span
                 class="inline-flex items-center rounded border border-black/65 bg-gray-200 px-2 py-1 text-black"
               >
-                {new Date(movie.releaseDate).getFullYear()}
+                {new Date(data.movie.releaseDate).getFullYear()}
               </span>
-              <span class="text-md text-gray-500 {movie.backdropPath ? 'md:text-gray-200' : ''}"
-                >{formatRuntime(movie.runtime)}</span
+              <span class="text-md text-gray-500 {data.movie.backdropPath ? 'md:text-gray-200' : ''}"
+                >{formatRuntime(data.movie.runtime)}</span
               >
             </div>
-            <p class="mb-8 text-lg text-gray-700 {movie.backdropPath ? 'md:text-gray-200' : ''}">
-              {movie.overview}
+            <p class="mb-8 text-lg text-gray-700 {data.movie.backdropPath ? 'md:text-gray-200' : ''}">
+              {data.movie.overview}
             </p>
           </div>
         </div>
@@ -440,7 +384,7 @@
     <!-- Cast Section -->
     <div class="container mx-auto px-4 py-8">
       <div class="mb-4 flex items-baseline justify-between gap-2">
-        <h2 class="text-2xl font-bold">{movie.cast.length} Cast</h2>
+        <h2 class="text-2xl font-bold">{data.movie.cast.length} Cast</h2>
         <span class="text-sm text-gray-500">
           {#if selectedCastIds.size > 0}
             Seaching with {selectedCastIds.size} cast
@@ -451,7 +395,7 @@
       </div>
       <div class="overflow-x-auto rounded-lg bg-white p-4 shadow-sm">
         <div class="flex items-start gap-4" style="min-width: min-content">
-          {#each movie.cast as member (member.id)}
+          {#each data.movie.cast as member (member.id)}
             <button
               class="group w-32 flex-shrink-0 text-left transition-transform duration-200 focus:outline-none"
               class:selected={selectedCastIds.has(member.id)}
@@ -521,7 +465,7 @@
         {:else if castMovies.length > 0}
           <div class="space-y-4">
             {#each castMovies as castMovie (castMovie.id)}
-              {#if castMovie.id !== movie?.id}
+              {#if castMovie.id !== data.movie?.id}
                 <a
                   href="/movie/{castMovie.id}"
                   class="flex items-start gap-4 rounded-lg bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
