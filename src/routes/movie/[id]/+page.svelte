@@ -285,7 +285,9 @@
     let title = `${movie.title} (${year})`;
 
     if (castCount > 0) {
-      title = `${title} — ${castCount} Cast`;
+      title = `${title} — ${castCount} cast selected`;
+    } else {
+      title = `${title} — MovieGPT`;
     }
 
     document.title = title;
