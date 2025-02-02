@@ -54,17 +54,27 @@
     }
   }
 
+  function updateSearchParam(immediate = false) {
+    const url = new URL(window.location.href);
+    if (searchInput.trim()) {
+      url.searchParams.set('q', searchInput);
+    } else {
+      url.searchParams.delete('q');
+    }
+    goto(url.toString(), { replaceState: true });
+  }
+
   function handleInput() {
     clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => {
-      const url = new URL(window.location.href);
-      if (searchInput.trim()) {
-        url.searchParams.set('q', searchInput);
-      } else {
-        url.searchParams.delete('q');
-      }
-      goto(url.toString(), { replaceState: true });
-    }, 1500);
+    debounceTimer = setTimeout(() => updateSearchParam(), 1500);
+  }
+
+  function handleKeyDown(event: KeyboardEvent) {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      clearTimeout(debounceTimer);
+      updateSearchParam();
+    }
   }
 
   function formatTitle(movie: SearchMovie) {
@@ -86,6 +96,7 @@
       type="text"
       bind:value={searchInput}
       on:input={handleInput}
+      on:keydown={handleKeyDown}
       placeholder="Search for movies..."
       class="w-full rounded-lg border border-gray-300 px-4 py-2 text-lg focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
     />
