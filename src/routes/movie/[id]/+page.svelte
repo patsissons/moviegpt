@@ -1,6 +1,8 @@
 <script lang="ts">
   import { page } from '$app/state';
   import { onMount } from 'svelte';
+  import { browser } from '$app/environment';
+  import { goto } from '$app/navigation';
 
   interface CastMember {
     id: number;
@@ -51,6 +53,47 @@
   let castSearchTimer: NodeJS.Timeout;
   let observers = new Map<number, IntersectionObserver>();
   let sortBy: SortBy = 'year';
+  let isInitialLoad = true;
+
+  // Load initial state from URL
+  $: if (browser && isInitialLoad && movie) {
+    const searchParams = new URLSearchParams(page.url.search);
+    const castParam = searchParams.get('cast');
+    const sortParam = searchParams.get('sort') as SortBy;
+
+    if (castParam) {
+      const castIds = castParam.split(',').map(Number);
+      // Only select cast IDs that exist in the current movie
+      castIds.forEach(id => {
+        if (movie?.cast.some(member => member.id === id)) {
+          selectedCastIds.add(id);
+        }
+      });
+      selectedCastIds = selectedCastIds;
+    }
+
+    if (sortParam && (sortParam === 'year' || sortParam === 'rating')) {
+      sortBy = sortParam;
+    }
+
+    isInitialLoad = false;
+    if (selectedCastIds.size > 0) {
+      searchCastMovies();
+    }
+  }
+
+  // Update URL when selection or sort changes
+  $: if (browser && !isInitialLoad) {
+    const url = new URL(window.location.href);
+    if (selectedCastIds.size > 0) {
+      url.searchParams.set('cast', Array.from(selectedCastIds).join(','));
+      url.searchParams.set('sort', sortBy);
+    } else {
+      url.searchParams.delete('cast');
+      url.searchParams.delete('sort');
+    }
+    goto(url.toString(), { replaceState: true, keepFocus: true });
+  }
 
   async function loadMovieDetails(id: string) {
     try {
@@ -58,11 +101,15 @@
       if (!response.ok) throw new Error('Failed to load movie details');
       const data = await response.json();
       movie = data.movie;
-      // Clear selections when loading a new movie
-      selectedCastIds.clear();
-      selectedCastIds = selectedCastIds;
-      castMovies = [];
-      hasPerformedSearch = false;
+
+      if (!isInitialLoad) {
+        // Only clear selections when navigating to a new movie, not on initial load
+        selectedCastIds.clear();
+        selectedCastIds = selectedCastIds;
+        castMovies = [];
+        hasPerformedSearch = false;
+      }
+
       // Clean up any existing observers
       observers.forEach((observer) => observer.disconnect());
       observers.clear();
@@ -186,6 +233,10 @@
   $: if (selectedCastIds) {
     clearTimeout(castSearchTimer);
     castSearchTimer = setTimeout(searchCastMovies, 2500);
+  }
+
+  function updateSort(newSort: SortBy) {
+    sortBy = newSort;
   }
 
   $: if (page.params.id) {
@@ -350,13 +401,13 @@
           <div class="flex rounded-lg border border-gray-200 bg-white">
             <button
               class="w-14 px-3 py-1 text-sm text-center {sortBy === 'year' ? 'bg-blue-500 text-white' : 'text-gray-600 hover:bg-gray-100'} rounded-l-lg transition-colors"
-              on:click={() => sortBy = 'year'}
+              on:click={() => updateSort('year')}
             >
               Year
             </button>
             <button
               class="w-14 px-3 py-1 text-sm text-center {sortBy === 'rating' ? 'bg-blue-500 text-white' : 'text-gray-600 hover:bg-gray-100'} rounded-r-lg transition-colors"
-              on:click={() => sortBy = 'rating'}
+              on:click={() => updateSort('rating')}
             >
             ★
             </button>
