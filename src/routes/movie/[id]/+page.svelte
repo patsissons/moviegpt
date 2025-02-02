@@ -92,7 +92,7 @@
       url.searchParams.delete('cast');
       url.searchParams.delete('sort');
     }
-    goto(url.toString(), { replaceState: true, keepFocus: true });
+    goto(url.toString(), { replaceState: true, keepFocus: true, noScroll: true });
   }
 
   async function loadMovieDetails(id: string) {

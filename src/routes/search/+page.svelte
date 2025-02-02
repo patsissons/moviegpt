@@ -61,7 +61,7 @@
     } else {
       url.searchParams.delete('q');
     }
-    goto(url.toString(), { replaceState: true });
+    goto(url.toString(), { replaceState: true, keepFocus: true, noScroll: true });
   }
 
   function handleInput() {
