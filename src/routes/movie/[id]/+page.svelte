@@ -1,8 +1,10 @@
 <script lang="ts">
-  import { page } from '$app/stores';
+  import dayjs from 'dayjs';
   import { onMount } from 'svelte';
   import { browser } from '$app/environment';
   import { goto } from '$app/navigation';
+  import { page } from '$app/stores';
+  import { store as watchedStore, type Watched } from '$lib/watched';
   import type { PageData } from './$types';
 
   interface CastMember {
@@ -152,7 +154,7 @@
       if (castDiff !== 0) return castDiff;
 
       // Then sort by selected criteria
-      if (sortBy === 'year') {
+      if (sort === 'year') {
         return new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime();
       } else {
         return b.vote - a.vote;
@@ -215,6 +217,31 @@
       .join(', ');
   }
 
+  function toggleWatched() {
+    if (!movie) return;
+
+    const { id, title, releaseDate } = movie;
+    const year = new Date(releaseDate).getFullYear();
+
+    if (watched) {
+      watchedStore.remove(id);
+    } else {
+      watchedStore.set({ id, title, year, watchedOn: dayjs().format('YYYY-MM-DD') });
+    }
+
+    reloadWatched();
+  }
+
+  let watched: Watched | undefined;
+
+  function reloadWatched() {
+    if (!movie) return;
+
+    watched = watchedStore.get(movie.id);
+
+    return watched;
+  }
+
   onMount(() => {
     return () => {
       clearTimeout(castSearchTimer);
@@ -223,6 +250,8 @@
       observers.clear();
     };
   });
+
+  $: reloadWatched();
 
   // Update document title when movie changes
   $: if (browser && movie) {
@@ -278,10 +307,10 @@
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
   {/if}
-  <meta property="og:url" content="{$page.url.href}" />
+  <meta property="og:url" content={$page.url.href} />
 </svelte:head>
 
-<div class="relative min-h-screen bg-gray-100">
+<div>
   {#if !data.movie}
     <div class="flex min-h-screen items-center justify-center">
       <div class="h-12 w-12 animate-spin rounded-full border-b-2 border-blue-500"></div>
@@ -289,58 +318,42 @@
   {:else if error}
     <div class="p-4 text-center text-red-500">{error}</div>
   {:else}
-    <div class="relative overflow-clip">
-      {#if data.movie.backdropPath}
-        <div class="absolute inset-0 h-[50vh]">
-          <div class="absolute inset-0 z-10 bg-black/50"></div>
-          <div
-            class="absolute inset-0 top-full z-10 h-full bg-gradient-to-b from-black/50 to-transparent"
-          ></div>
+    <div class="relative">
+      <div class="absolute inset-0 h-[440px]">
+        {#if data.movie.backdropPath}
           <img
             src={data.movie.backdropPath}
             alt={data.movie.title}
-            class="h-full min-h-[400px] w-full object-cover"
+            class="w-full h-full object-cover object-top"
           />
-        </div>
-      {/if}
-
-      <div class="absolute right-0 top-0 z-50 p-4">
-        <a
-          href="/search"
-          class="z-10 block rounded-md border border-black/65 bg-cyan-500 p-2 text-white hover:shadow-md hover:brightness-110"
-          aria-label="Search"
-        >
-          <svg
-            stroke="currentColor"
-            fill="currentColor"
-            stroke-width="0"
-            viewBox="0 0 512 512"
-            height="20px"
-            width="20px"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M456.69 421.39 362.6 327.3a173.81 173.81 0 0 0 34.84-104.58C397.44 126.38 319.06 48 222.72 48S48 126.38 48 222.72s78.38 174.72 174.72 174.72A173.81 173.81 0 0 0 327.3 362.6l94.09 94.09a25 25 0 0 0 35.3-35.3zM97.92 222.72a124.8 124.8 0 1 1 124.8 124.8 124.95 124.95 0 0 1-124.8-124.8z"
-            ></path>
-          </svg>
-        </a>
+        {/if}
+        <div class="absolute h-full inset-0 bg-black/40"></div>
       </div>
 
-      <div class="container relative z-20 mx-auto px-4 py-8">
+      <div class="container z-20 mx-auto px-4 py-8">
         <div class="flex flex-col items-start gap-8 md:flex-row">
           <!-- Movie Poster -->
-          <div class="w-64 flex-shrink-0">
+          <div class="relative w-64 flex-shrink-0 overflow-hidden rounded-lg shadow-xl">
             {#if data.movie.posterPath}
-              <img src={data.movie.posterPath} alt={data.movie.title} class="w-full rounded-lg shadow-xl" />
+              <img src={data.movie.posterPath} alt={data.movie.title} class="w-full" />
             {:else}
-              <div class="flex h-96 w-full items-center justify-center rounded-lg bg-gray-200">
+              <div class="flex h-96 w-full items-center justify-center bg-gray-200">
                 <span class="text-gray-400">No poster</span>
               </div>
             {/if}
+            <div class="absolute bottom-0 left-0 right-0">
+              <button
+                class="w-full px-2 py-1 font-medium text-gray-200 hover:text-amber-300 {watched
+                  ? "bg-indigo-500/90 after:content-['Watched'] hover:after:content-['Mark_unwatched']"
+                  : "bg-gray-500/90 after:content-['Unwatched'] hover:after:content-['Mark_watched']"}"
+                aria-label={watched ? 'Mark unwatched' : 'Mark watched'}
+                on:click={toggleWatched}
+              ></button>
+            </div>
           </div>
 
           <!-- Movie Details -->
-          <div class="flex-1 {data.movie.backdropPath ? 'md:text-white' : 'text-gray-900'}">
+          <div class="flex-1 z-20 {data.movie.backdropPath ? 'md:text-white' : 'text-gray-900'}">
             <h1 class="mb-4 text-4xl font-bold">{data.movie.title}</h1>
             <div class="mb-4 flex flex-wrap items-center gap-4">
               <span
@@ -369,11 +382,14 @@
               >
                 {new Date(data.movie.releaseDate).getFullYear()}
               </span>
-              <span class="text-md text-gray-500 {data.movie.backdropPath ? 'md:text-gray-200' : ''}"
+              <span
+                class="text-md text-gray-500 {data.movie.backdropPath ? 'md:text-gray-200' : ''}"
                 >{formatRuntime(data.movie.runtime)}</span
               >
             </div>
-            <p class="mb-8 text-lg text-gray-700 {data.movie.backdropPath ? 'md:text-gray-200' : ''}">
+            <p
+              class="mb-8 text-lg text-gray-700 {data.movie.backdropPath ? 'md:text-gray-200' : ''}"
+            >
               {data.movie.overview}
             </p>
           </div>
@@ -382,7 +398,7 @@
     </div>
 
     <!-- Cast Section -->
-    <div class="container mx-auto px-4 py-8">
+    <div class="container mx-auto px-4 py-8 z-20">
       <div class="mb-4 flex items-baseline justify-between gap-2">
         <h2 class="text-2xl font-bold">{data.movie.cast.length} Cast</h2>
         <span class="text-sm text-gray-500">
@@ -466,25 +482,35 @@
           <div class="space-y-4">
             {#each castMovies as castMovie (castMovie.id)}
               {#if castMovie.id !== data.movie?.id}
+                {@const castMovieWatched = watchedStore.has(castMovie.id)}
                 <a
                   href="/movie/{castMovie.id}"
                   class="flex items-start gap-4 rounded-lg bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
                   use:observeMovie={castMovie}
                 >
-                  <div class="h-36 w-24 flex-shrink-0">
+                  <div class="relative h-36 w-24 flex-shrink-0 overflow-hidden rounded">
                     {#if castMovie.posterPath}
                       <img
                         src={castMovie.posterPath}
                         alt={castMovie.title}
-                        class="h-full w-full rounded object-cover"
+                        class="h-full w-full object-cover"
                       />
                     {:else}
                       <div
-                        class="flex h-full w-full items-center justify-center rounded bg-gray-200"
+                        class="flex h-full w-full items-center justify-center bg-gray-200"
                       >
                         <span class="text-gray-400">No poster</span>
                       </div>
                     {/if}
+                    <div class="absolute bottom-0 left-0 right-0">
+                      <p
+                        class="w-full px-2 py-1 text-xs text-center font-medium text-gray-200 {castMovieWatched
+                          ? "bg-indigo-500/90"
+                          : "bg-gray-500/90"}"
+                      >
+                        {castMovieWatched ? 'Watched' : 'Unwatched'}
+                      </p>
+                    </div>
                   </div>
                   <div class="min-w-0 flex-1">
                     <h3 class="text-lg font-medium text-gray-900">

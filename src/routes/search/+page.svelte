@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { page } from '$app/stores';
-  import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
   import { browser } from '$app/environment';
+  import { goto } from '$app/navigation';
+  import { page } from '$app/stores';
+  import { store as watchedStore } from '$lib/watched';
 
   type SearchMovie = {
     id: number;
@@ -55,7 +56,7 @@
     }
   }
 
-  function updateSearchParam(immediate = false) {
+  function updateSearchParam() {
     const url = new URL(window.location.href);
     if (searchInput.trim()) {
       url.searchParams.set('q', searchInput);
@@ -94,9 +95,15 @@
 <svelte:head>
   {#if queryParam}
     <meta property="og:title" content={`Searching for ${queryParam} - MovieGPT`} />
-    <meta property="og:description" content={`Searching for movies with "${queryParam}" - MovieGPT`} />
+    <meta
+      property="og:description"
+      content={`Searching for movies with "${queryParam}" - MovieGPT`}
+    />
     <meta name="twitter:title" content={`Searching for ${queryParam} - MovieGPT`} />
-    <meta name="twitter:description" content={`Searching for movies with "${queryParam}" - MovieGPT`} />
+    <meta
+      name="twitter:description"
+      content={`Searching for movies with "${queryParam}" - MovieGPT`}
+    />
   {:else}
     <meta property="og:title" content="Search - MovieGPT" />
     <meta property="og:description" content="Search for movies - MovieGPT" />
@@ -107,10 +114,10 @@
   <meta property="og:image" content="https://movies.place/og-image.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
-  <meta property="og:url" content="{$page.url.href}" />
+  <meta property="og:url" content={$page.url.href} />
 </svelte:head>
 
-<div class="flex min-h-screen flex-col items-center justify-start bg-gray-100 p-4">
+<div class="flex flex-col items-center justify-start p-4">
   <div class="mb-8 w-full max-w-xl">
     <input
       type="text"
@@ -133,25 +140,41 @@
       class="mx-auto grid max-w-6xl grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5"
     >
       {#each movies as movie (movie.id)}
+        {@const movieWatched = watchedStore.has(movie.id)}
         <a
           href="/movie/{movie.id}"
           class="flex transform flex-col items-center transition-transform hover:scale-105"
         >
-          <div class="relative mb-2 h-72 w-48">
-            {#if movie.posterPath}
-              <img
-                src={movie.posterPath}
-                alt={movie.title}
-                class="h-full w-full rounded-lg object-cover shadow-lg"
-              />
-            {:else}
-              <div class="flex h-full w-full items-center justify-center rounded-lg bg-gray-200">
-                <span class="text-gray-400">No poster</span>
+          <div class="relative mb-2">
+            <div class="relative h-72 w-48 rounded-lg overflow-hidden">
+              {#if movie.posterPath}
+                <img
+                  src={movie.posterPath}
+                  alt={movie.title}
+                  class="h-full w-full object-cover shadow-lg"
+                />
+              {:else}
+                <div class="flex h-full w-full items-center justify-center bg-gray-200">
+                  <span class="text-gray-400">No poster</span>
+                </div>
+              {/if}
+              <div class="absolute bottom-0 left-0 right-0">
+                <p
+                  class="w-full px-2 py-1 text-xs text-center font-medium text-gray-200 {movieWatched
+                    ? "bg-indigo-500/90"
+                    : "bg-gray-500/90"}"
+                >
+                  {movieWatched ? 'Watched' : 'Unwatched'}
+                </p>
               </div>
-            {/if}
+            </div>
             {#if movie.voteAverage && movie.voteCount}
-              <div class="absolute -top-1 -right-1">
-                <span class="inline-flex items-center rounded {movie.voteCount > 100 ? 'bg-yellow-400' : 'bg-gray-200'} px-2 py-1 text-black border border-black/65 shadow-md">
+              <div class="absolute -right-1 -top-1">
+                <span
+                  class="inline-flex items-center rounded {movie.voteCount > 100
+                    ? 'bg-yellow-400'
+                    : 'bg-gray-200'} border border-black/65 px-2 py-1 text-black shadow-md"
+                >
                   ★ {movie.voteAverage.toFixed(1)}
                 </span>
               </div>

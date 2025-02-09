@@ -45,7 +45,7 @@ export interface PageData {
   sortBy: SortBy;
 }
 
-export const load = (async ({ fetch, params, url }: LoadEvent) => {
+export const load = async ({ fetch, params, url }: LoadEvent) => {
   try {
     // Get selected cast IDs from URL
     const searchParams = url.searchParams;
@@ -74,10 +74,10 @@ export const load = (async ({ fetch, params, url }: LoadEvent) => {
       movie: movieData.movie as Movie,
       castMovies,
       selectedCastIds,
-      sortBy: sortParam || 'year'
+      sortBy: sortParam || 'year',
     } satisfies PageData;
   } catch (err) {
     console.error('Error loading movie data:', err);
     throw error(500, 'Unable to load movie data');
   }
-});
+};
